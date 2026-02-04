@@ -213,18 +213,16 @@ const cloneRepository = async(
 };
 
 /**
- * Handles updating an existing branch with a newer version.
- * @param options - The branch update options.
- * @returns The update result.
+ * Deletes a stale local branch if it exists.
+ * @param logger - The logger instance.
+ * @param repoPath - Path to the repository.
+ * @param branchName - Name of the branch to delete.
  */
-const handleExistingBranch = async(
-  options: BranchUpdateOptions,
-): Promise<UpdateResult> => {
-  const { branchName, clonedRepo, logger, packageName, targetVersion }
-    = options;
-  const { path: repoPath } = clonedRepo;
-
-  // Delete local branch if it exists (stale from previous run)
+const deleteStaleLocalBranch = async(
+  logger: Logger,
+  repoPath: string,
+  branchName: string,
+): Promise<void> => {
   const localBranchOutput = await runGitCommand(logger, repoPath, "git branch");
   const localBranchNames = localBranchOutput.
     split("\n").
@@ -237,6 +235,28 @@ const handleExistingBranch = async(
   if (localBranchNames.includes(branchName)) {
     await runGitCommand(logger, repoPath, `git branch -D ${branchName}`);
   }
+};
+
+/**
+ * Handles updating an existing branch with a newer version.
+ * @param options - The branch update options.
+ * @returns The update result.
+ */
+const handleExistingBranch = async(
+  options: BranchUpdateOptions,
+): Promise<UpdateResult> => {
+  const { branchName, clonedRepo, logger, packageName, targetVersion }
+    = options;
+  const { path: repoPath } = clonedRepo;
+
+  await deleteStaleLocalBranch(logger, repoPath, branchName);
+
+  // Fetch the specific branch to ensure we have the latest refs
+  await runGitCommand(
+    logger,
+    repoPath,
+    `git fetch origin ${branchName}:refs/remotes/origin/${branchName}`,
+  );
 
   await runGitCommand(
     logger,
