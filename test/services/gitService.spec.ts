@@ -402,6 +402,44 @@ describe("gitService", () => {
     expect(writtenContent.devDependencies["test-package"]).toBe("2.0.0");
   });
 
+  it("should fall back to new branch when remote branch fetch fails", async() => {
+    expect.assertions(2);
+    mockExecAsync.mockImplementation((command: string) => {
+      if (command.includes("git branch -r")) {
+        // Report branch as existing
+        return Promise.resolve({
+          stderr: "",
+          stdout: "  origin/dependencies/update-test-package\n",
+        });
+      }
+      if (command.includes("git fetch origin dependencies/update-test-package")) {
+        // But fail when trying to fetch it (deleted between check and fetch)
+        const error = new Error("Git command failed") as Error & { stderr: string };
+        error.stderr = "fatal: couldn't find remote ref dependencies/update-test-package";
+        return Promise.reject(error);
+      }
+      return Promise.resolve({ stderr: "", stdout: "" });
+    });
+    vi.mocked(readFile).mockResolvedValue(JSON.stringify({
+      dependencies: { "test-package": "1.0.0" },
+    }));
+    vi.mocked(writeFile).mockResolvedValue(undefined);
+    const { createOrUpdateBranch } = await import("../../src/services/gitService.js");
+    const mockClonedRepo = createMockClonedRepo();
+    const result = await createOrUpdateBranch({
+      branchName:    "dependencies/update-test-package",
+      clonedRepo:    mockClonedRepo,
+      logger:        mockLogger,
+      packageName:   "test-package",
+      targetVersion: "2.0.0",
+    });
+    // Should fall back to creating a new branch
+    expect(result.status).toBe("created");
+    if (result.status === "created") {
+      expect(result.branchName).toBe("dependencies/update-test-package");
+    }
+  });
+
   it("should log pnpm error details when install fails", async() => {
     expect.assertions(2);
     mockExecAsync.mockImplementation((command: string) => {

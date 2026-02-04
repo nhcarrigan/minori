@@ -238,31 +238,58 @@ const deleteStaleLocalBranch = async(
 };
 
 /**
+ * Fetches and checks out an existing remote branch.
+ * @param logger - The logger instance.
+ * @param repoPath - The repository path.
+ * @param branchName - The branch name to fetch and checkout.
+ * @returns True if successful, false if the branch no longer exists on remote.
+ */
+const fetchAndCheckoutRemoteBranch = async(
+  logger: Logger,
+  repoPath: string,
+  branchName: string,
+): Promise<boolean> => {
+  try {
+    await runGitCommand(
+      logger,
+      repoPath,
+      `git fetch origin ${branchName}:refs/remotes/origin/${branchName}`,
+    );
+    await runGitCommand(
+      logger,
+      repoPath,
+      `git checkout -b ${branchName} origin/${branchName}`,
+    );
+    return true;
+  } catch {
+    // Branch may have been deleted between check and fetch
+    return false;
+  }
+};
+
+/**
  * Handles updating an existing branch with a newer version.
  * @param options - The branch update options.
- * @returns The update result.
+ * @returns The update result, or null if branch no longer exists.
  */
 const handleExistingBranch = async(
   options: BranchUpdateOptions,
-): Promise<UpdateResult> => {
+): Promise<UpdateResult | null> => {
   const { branchName, clonedRepo, logger, packageName, targetVersion }
     = options;
   const { path: repoPath } = clonedRepo;
 
   await deleteStaleLocalBranch(logger, repoPath, branchName);
 
-  // Fetch the specific branch to ensure we have the latest refs
-  await runGitCommand(
+  const checkedOut = await fetchAndCheckoutRemoteBranch(
     logger,
     repoPath,
-    `git fetch origin ${branchName}:refs/remotes/origin/${branchName}`,
+    branchName,
   );
-
-  await runGitCommand(
-    logger,
-    repoPath,
-    `git checkout -b ${branchName} origin/${branchName}`,
-  );
+  if (!checkedOut) {
+    // Branch was deleted on remote, fall back to creating new branch
+    return null;
+  }
 
   const currentVersion = await getCurrentVersionOnBranch(repoPath, packageName);
 
@@ -355,7 +382,11 @@ const createOrUpdateBranch = async(
     const branchExists = remoteBranches.includes(`origin/${branchName}`);
 
     if (branchExists) {
-      return await handleExistingBranch(options);
+      const result = await handleExistingBranch(options);
+      // If null, branch was deleted on remote between check and fetch
+      if (result !== null) {
+        return result;
+      }
     }
 
     return await handleNewBranch(options);
