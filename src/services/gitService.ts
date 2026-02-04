@@ -225,8 +225,16 @@ const handleExistingBranch = async(
   const { path: repoPath } = clonedRepo;
 
   // Delete local branch if it exists (stale from previous run)
-  const localBranches = await runGitCommand(logger, repoPath, "git branch");
-  if (localBranches.includes(branchName)) {
+  const localBranchOutput = await runGitCommand(logger, repoPath, "git branch");
+  const localBranchNames = localBranchOutput.
+    split("\n").
+    map((line) => {
+      return line.replace(/^\*?\s*/, "").trim();
+    }).
+    filter((name) => {
+      return name.length > 0;
+    });
+  if (localBranchNames.includes(branchName)) {
     await runGitCommand(logger, repoPath, `git branch -D ${branchName}`);
   }
 
