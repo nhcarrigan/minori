@@ -33,6 +33,7 @@ interface NpmPackageInfo {
     latest:        string;
   };
   "name":     string;
+  "time":     Record<string, string>;
   "versions": Record<
     string,
     {

@@ -8,8 +8,13 @@
 /* eslint-disable max-lines-per-function -- Test suites require many test cases */
 /* eslint-disable @typescript-eslint/naming-convention -- Test data uses npm package names and destructured imports */
 /* eslint-disable @typescript-eslint/consistent-type-assertions -- Required for mocking */
-
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const getDaysAgoIso = (days: number): string => {
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const ageMs = days * msPerDay;
+  return new Date(Date.now() - ageMs).toISOString();
+};
 
 vi.mock("@nhcarrigan/logger", () => {
   return {
@@ -57,10 +62,13 @@ describe("dependencyAnalyzerService", () => {
   it("should find updates for dependencies", async() => {
     expect.assertions(2);
     const mockNpmService = createMockNpmService();
+    // Include time field with a date >10 days ago for the mature version check
+    const oldDate = getDaysAgoIso(15);
     mockNpmService.getPackageInfo.mockResolvedValue({
       "dist-tags": { latest: "2.0.0" },
       "name":      "test-package",
-      "versions":  {},
+      "time":      { "2.0.0": oldDate },
+      "versions":  { "2.0.0": { version: "2.0.0" } },
     });
     const { DependencyAnalyzerService }
       = await import("../../src/services/dependencyAnalyzerService.js");
@@ -197,10 +205,12 @@ describe("dependencyAnalyzerService", () => {
   it("should not include packages that are already up-to-date", async() => {
     expect.assertions(1);
     const mockNpmService = createMockNpmService();
+    const oldDate = getDaysAgoIso(15);
     mockNpmService.getPackageInfo.mockResolvedValue({
       "dist-tags": { latest: "1.0.0" },
       "name":      "test-package",
-      "versions":  {},
+      "time":      { "1.0.0": oldDate },
+      "versions":  { "1.0.0": { version: "1.0.0" } },
     });
     const { DependencyAnalyzerService }
       = await import("../../src/services/dependencyAnalyzerService.js");
@@ -235,10 +245,12 @@ describe("dependencyAnalyzerService", () => {
   it("should handle version prefixes like ^", async() => {
     expect.assertions(2);
     const mockNpmService = createMockNpmService();
+    const oldDate = getDaysAgoIso(15);
     mockNpmService.getPackageInfo.mockResolvedValue({
       "dist-tags": { latest: "2.0.0" },
       "name":      "test-package",
-      "versions":  {},
+      "time":      { "2.0.0": oldDate },
+      "versions":  { "2.0.0": { version: "2.0.0" } },
     });
     const { DependencyAnalyzerService }
       = await import("../../src/services/dependencyAnalyzerService.js");
@@ -274,10 +286,12 @@ describe("dependencyAnalyzerService", () => {
   it("should handle semver comparison errors", async() => {
     expect.assertions(1);
     const mockNpmService = createMockNpmService();
+    const oldDate = getDaysAgoIso(15);
     mockNpmService.getPackageInfo.mockResolvedValue({
       "dist-tags": { latest: "invalid-version" },
       "name":      "test-package",
-      "versions":  {},
+      "time":      { "invalid-version": oldDate },
+      "versions":  { "invalid-version": { version: "invalid-version" } },
     });
     const { DependencyAnalyzerService }
       = await import("../../src/services/dependencyAnalyzerService.js");
@@ -287,6 +301,30 @@ describe("dependencyAnalyzerService", () => {
     const result = await analyzerService.analyzePackageJson({
       dependencies: {
         "test-package": "also-invalid",
+      },
+    });
+    expect(result).toStrictEqual([]);
+  });
+
+  it("should return null when no mature version exists", async() => {
+    expect.assertions(1);
+    const mockNpmService = createMockNpmService();
+    // Use a very recent date (2 days ago) so getLatestMatureVersion returns null
+    const recentDate = getDaysAgoIso(2);
+    mockNpmService.getPackageInfo.mockResolvedValue({
+      "dist-tags": { latest: "2.0.0" },
+      "name":      "test-package",
+      "time":      { "2.0.0": recentDate },
+      "versions":  { "2.0.0": { version: "2.0.0" } },
+    });
+    const { DependencyAnalyzerService }
+      = await import("../../src/services/dependencyAnalyzerService.js");
+    const analyzerService = new DependencyAnalyzerService(
+      mockNpmService as Parameters<typeof DependencyAnalyzerService>[0],
+    );
+    const result = await analyzerService.analyzePackageJson({
+      dependencies: {
+        "test-package": "1.0.0",
       },
     });
     expect(result).toStrictEqual([]);

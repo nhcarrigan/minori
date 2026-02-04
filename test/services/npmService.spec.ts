@@ -11,10 +11,18 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports -- Dynamic imports */
 /* eslint-disable vitest/require-to-throw-message -- Generic throw assertion */
 /* eslint-disable stylistic/max-len -- Test files have long URLs */
+/* eslint-disable max-lines -- Test files have many test cases */
+/* eslint-disable max-statements -- Test describe blocks have many statements */
 
 import axios, { AxiosError, type AxiosResponse } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NpmService } from "../../src/services/npmService.js";
+
+const getDaysAgoIso = (days: number): string => {
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const ageMs = days * msPerDay;
+  return new Date(Date.now() - ageMs).toISOString();
+};
 
 vi.mock("axios", async() => {
   const actualAxios = await vi.importActual<typeof import("axios")>("axios");
@@ -330,5 +338,95 @@ describe("npmService", () => {
       toVersion:   "2.0.0",
     });
     expect(result).toBe("Updated from 1.0.0 to 2.0.0");
+  });
+
+  it("should return latest mature version when versions are old enough", () => {
+    expect.assertions(1);
+    const oldDate = getDaysAgoIso(15);
+    const packageInfo = {
+      "dist-tags": { latest: "2.0.0" },
+      "name":      "test-package",
+      "time":      { "1.0.0": oldDate, "2.0.0": oldDate },
+      "versions":  {
+        "1.0.0": { version: "1.0.0" },
+        "2.0.0": { version: "2.0.0" },
+      },
+    };
+    const result = NpmService.getLatestMatureVersion(packageInfo);
+    expect(result).toBe("2.0.0");
+  });
+
+  it("should return null when no mature versions exist", () => {
+    expect.assertions(1);
+    const recentDate = getDaysAgoIso(2);
+    const packageInfo = {
+      "dist-tags": { latest: "2.0.0" },
+      "name":      "test-package",
+      "time":      { "2.0.0": recentDate },
+      "versions":  { "2.0.0": { version: "2.0.0" } },
+    };
+    const result = NpmService.getLatestMatureVersion(packageInfo);
+    expect(result).toBeNull();
+  });
+
+  it("should skip versions without time data", () => {
+    expect.assertions(1);
+    const oldDate = getDaysAgoIso(15);
+    const packageInfo = {
+      "dist-tags": { latest: "2.0.0" },
+      "name":      "test-package",
+      "time":      { "1.0.0": oldDate },
+      "versions":  {
+        "1.0.0": { version: "1.0.0" },
+        "2.0.0": { version: "2.0.0" },
+      },
+    };
+    const result = NpmService.getLatestMatureVersion(packageInfo);
+    expect(result).toBe("1.0.0");
+  });
+
+  it("should sort versions correctly and return the latest", () => {
+    expect.assertions(1);
+    const oldDate = getDaysAgoIso(15);
+    const packageInfo = {
+      "dist-tags": { latest: "3.0.0" },
+      "name":      "test-package",
+      "time":      { "1.0.0": oldDate, "2.0.0": oldDate, "3.0.0": oldDate },
+      "versions":  {
+        "1.0.0": { version: "1.0.0" },
+        "2.0.0": { version: "2.0.0" },
+        "3.0.0": { version: "3.0.0" },
+      },
+    };
+    const result = NpmService.getLatestMatureVersion(packageInfo);
+    expect(result).toBe("3.0.0");
+  });
+
+  it("should use custom minimumAgeDays parameter", () => {
+    expect.assertions(1);
+    const fiveDaysAgo = getDaysAgoIso(5);
+    const packageInfo = {
+      "dist-tags": { latest: "2.0.0" },
+      "name":      "test-package",
+      "time":      { "2.0.0": fiveDaysAgo },
+      "versions":  { "2.0.0": { version: "2.0.0" } },
+    };
+    // Default is 10 days, so 5 days old should be null
+    const resultDefault = NpmService.getLatestMatureVersion(packageInfo);
+    expect(resultDefault).toBeNull();
+  });
+
+  it("should return mature version with custom minimumAgeDays", () => {
+    expect.assertions(1);
+    const fiveDaysAgo = getDaysAgoIso(5);
+    const packageInfo = {
+      "dist-tags": { latest: "2.0.0" },
+      "name":      "test-package",
+      "time":      { "2.0.0": fiveDaysAgo },
+      "versions":  { "2.0.0": { version: "2.0.0" } },
+    };
+    // With 3 days minimum, 5 days old should be valid
+    const resultCustom = NpmService.getLatestMatureVersion(packageInfo, 3);
+    expect(resultCustom).toBe("2.0.0");
   });
 });

@@ -6,7 +6,7 @@
 
 import { Logger } from "@nhcarrigan/logger";
 import semver from "semver";
-import type { NpmService } from "./npmService.js";
+import { NpmService } from "./npmService.js";
 import type {
   DependencyType,
   DependencyUpdate,
@@ -151,7 +151,15 @@ class DependencyAnalyzerService {
         return null;
       }
 
-      const latestVersion = packageInfo["dist-tags"].latest;
+      // Use mature version (at least 10 days old) instead of dist-tags.latest
+      const latestVersion = NpmService.getLatestMatureVersion(
+        packageInfo,
+        10,
+      );
+      if (latestVersion === null) {
+        return null;
+      }
+
       const cleanCurrentVersion = cleanVersion(currentVersion);
 
       if (shouldUpdate(cleanCurrentVersion, latestVersion)) {

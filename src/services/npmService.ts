@@ -149,6 +149,44 @@ class NpmService {
   }
 
   /**
+   * Gets the latest version that is at least minimumAgeDays old.
+   * @param packageInfo - The package information from npm.
+   * @param minimumAgeDays - Minimum days since publication (default 10).
+   * @returns The latest mature version, or null if none found.
+   */
+  public static getLatestMatureVersion(
+    packageInfo: NpmPackageInfo,
+    minimumAgeDays = 10,
+  ): string | null {
+    const now = Date.now();
+    const minimumAgeMs = minimumAgeDays * 24 * 60 * 60 * 1000;
+    const cutoffDate = now - minimumAgeMs;
+
+    const versions = Object.keys(packageInfo.versions);
+    const matureVersions = versions.filter((version) => {
+      const publishedAt = packageInfo.time[version];
+      if (publishedAt === undefined) {
+        return false;
+      }
+      const publishedDate = new Date(publishedAt).getTime();
+      return publishedDate <= cutoffDate;
+    });
+
+    if (matureVersions.length === 0) {
+      return null;
+    }
+
+    // Sort by semver (descending) to get the latest mature version
+    matureVersions.sort((version1, version2) => {
+      return version2.localeCompare(version1, undefined, { numeric: true });
+    });
+
+    // eslint-disable-next-line capitalized-comments -- v8 coverage ignore directive must be lowercase
+    /* v8 ignore next -- @preserve */
+    return matureVersions[0] ?? null;
+  }
+
+  /**
    * Fetches changelog information for a package update.
    * @param options - The changelog fetch options.
    * @returns Formatted changelog string.
