@@ -291,6 +291,30 @@ describe("dependencyAnalyzerService", () => {
     expect(result[0]?.currentVersion).toBe(">=1.0.0");
   });
 
+  it("should handle partial version numbers like '2'", async() => {
+    expect.assertions(2);
+    const mockNpmService = createMockNpmService();
+    const oldDate = getDaysAgoIso(15);
+    mockNpmService.getPackageInfo.mockResolvedValue({
+      "dist-tags": { latest: "3.0.0" },
+      "name":      "test-package",
+      "time":      { "3.0.0": oldDate },
+      "versions":  { "3.0.0": { version: "3.0.0" } },
+    });
+    const { DependencyAnalyzerService }
+      = await import("../../src/services/dependencyAnalyzerService.js");
+    const analyzerService = new DependencyAnalyzerService(
+      mockNpmService as Parameters<typeof DependencyAnalyzerService>[0],
+    );
+    const result = await analyzerService.analyzePackageJson({
+      dependencies: {
+        "test-package": "2",
+      },
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0]?.currentVersion).toBe("2");
+  });
+
   it("should handle npm errors gracefully", async() => {
     expect.assertions(1);
     const mockNpmService = createMockNpmService();

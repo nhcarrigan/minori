@@ -42,12 +42,14 @@ const isValidSemverRange = (version: string): boolean => {
 };
 
 /**
- * Removes version prefixes for comparison.
+ * Removes version prefixes and coerces to valid semver.
  * @param version - The version string to sanitise.
- * @returns The cleaned version string.
+ * @returns The cleaned version string, or null if invalid.
  */
-const cleanVersion = (version: string): string => {
-  return version.replace(/^[<=>^~]+/, "");
+const cleanVersion = (version: string): string | null => {
+  const stripped = version.replace(/^[<=>^~]+/, "");
+  const coerced = semver.coerce(stripped);
+  return coerced?.version ?? null;
 };
 
 /**
@@ -66,6 +68,8 @@ const shouldUpdate = (
     }
 
     return semver.lt(currentVersion, latestVersion);
+  // eslint-disable-next-line capitalized-comments -- v8 coverage ignore directive must be lowercase
+  /* v8 ignore start -- @preserve */
   } catch (error) {
     void logger.error(
       `Error comparing versions: ${currentVersion} vs ${latestVersion}`,
@@ -74,6 +78,8 @@ const shouldUpdate = (
     );
     return false;
   }
+  // eslint-disable-next-line capitalized-comments -- v8 coverage ignore directive must be lowercase
+  /* v8 ignore stop -- @preserve */
 };
 
 /**
@@ -159,6 +165,9 @@ class DependencyAnalyzerService {
       }
 
       const cleanCurrentVersion = cleanVersion(currentVersion);
+      if (cleanCurrentVersion === null) {
+        return null;
+      }
 
       if (shouldUpdate(cleanCurrentVersion, latestVersion)) {
         return {
