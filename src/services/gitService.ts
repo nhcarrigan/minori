@@ -119,7 +119,7 @@ const runPnpmInstall = async(
   /* v8 ignore stop -- @preserve */
   /* eslint-enable capitalized-comments -- Re-enable rule */
   try {
-    await execAsync(`${pnpmPath} install --no-frozen-lockfile`, {
+    await execAsync(`${pnpmPath} install --no-frozen-lockfile --strict-peer-dependencies=false`, {
       cwd: repoPath,
       env: pnpmEnvironment,
     });
