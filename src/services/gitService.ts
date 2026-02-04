@@ -345,7 +345,8 @@ const createOrUpdateBranch = async(
   const { path: repoPath } = clonedRepo;
 
   try {
-    await runGitCommand(logger, repoPath, "git fetch origin");
+    // Use --prune to remove stale remote-tracking refs that no longer exist
+    await runGitCommand(logger, repoPath, "git fetch origin --prune");
     const remoteBranches = await runGitCommand(
       logger,
       repoPath,
