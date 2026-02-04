@@ -1,0 +1,35 @@
+{
+  "name": "minori",
+  "version": "1.0.0",
+  "description": "Automated dependency updater for Gitea repositories",
+  "main": "./prod/index.js",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src test --max-warnings 0",
+    "build": "tsc",
+    "start": "op run --env-file=prod.env -- node prod/index.js",
+    "test": "vitest run --coverage"
+  },
+  "keywords": [],
+  "author": "Naomi Carrigan",
+  "license": "See LICENSE.md",
+  "packageManager": "pnpm@10.28.1",
+  "devDependencies": {
+    "@nhcarrigan/eslint-config": "5.2.0",
+    "@nhcarrigan/typescript-config": "4.0.0",
+    "@types/node": "25.2.0",
+    "@types/node-cron": "3.0.11",
+    "@types/semver": "7.7.1",
+    "@vitest/coverage-istanbul": "^4.0.18",
+    "@vitest/coverage-v8": "^4.0.18",
+    "eslint": "9.39.2",
+    "typescript": "5.9.3",
+    "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "@nhcarrigan/logger": "1.1.1",
+    "axios": "1.13.4",
+    "node-cron": "4.2.1",
+    "semver": "7.7.3"
+  }
+}
