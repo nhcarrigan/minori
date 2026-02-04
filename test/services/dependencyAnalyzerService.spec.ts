@@ -6,6 +6,7 @@
 
 /* eslint-disable vitest/valid-expect -- Test expectations don't need messages */
 /* eslint-disable max-lines-per-function -- Test suites require many test cases */
+/* eslint-disable max-lines -- Test suites require many test cases */
 /* eslint-disable @typescript-eslint/naming-convention -- Test data uses npm package names and destructured imports */
 /* eslint-disable @typescript-eslint/consistent-type-assertions -- Required for mocking */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -264,6 +265,30 @@ describe("dependencyAnalyzerService", () => {
     });
     expect(result).toHaveLength(1);
     expect(result[0]?.currentVersion).toBe("^1.0.0");
+  });
+
+  it("should handle multi-character version prefixes like >=", async() => {
+    expect.assertions(2);
+    const mockNpmService = createMockNpmService();
+    const oldDate = getDaysAgoIso(15);
+    mockNpmService.getPackageInfo.mockResolvedValue({
+      "dist-tags": { latest: "2.0.0" },
+      "name":      "test-package",
+      "time":      { "2.0.0": oldDate },
+      "versions":  { "2.0.0": { version: "2.0.0" } },
+    });
+    const { DependencyAnalyzerService }
+      = await import("../../src/services/dependencyAnalyzerService.js");
+    const analyzerService = new DependencyAnalyzerService(
+      mockNpmService as Parameters<typeof DependencyAnalyzerService>[0],
+    );
+    const result = await analyzerService.analyzePackageJson({
+      dependencies: {
+        "test-package": ">=1.0.0",
+      },
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0]?.currentVersion).toBe(">=1.0.0");
   });
 
   it("should handle npm errors gracefully", async() => {

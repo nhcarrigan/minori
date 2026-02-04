@@ -47,7 +47,7 @@ const isValidSemverRange = (version: string): boolean => {
  * @returns The cleaned version string.
  */
 const cleanVersion = (version: string): string => {
-  return version.replace(/^[<=>^~]/, "");
+  return version.replace(/^[<=>^~]+/, "");
 };
 
 /**
