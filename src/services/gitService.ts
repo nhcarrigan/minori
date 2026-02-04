@@ -333,18 +333,19 @@ const handleNewBranch = async(
   const { path: repoPath } = clonedRepo;
 
   await runGitCommand(logger, repoPath, "git checkout main");
-  await runGitCommand(logger, repoPath, `git checkout -b ${branchName}`);
 
+  // Check if package exists before creating branch
   const currentVersion = await getCurrentVersionOnBranch(repoPath, packageName);
   if (currentVersion === null) {
     void logger.log("warn", `Package ${packageName} not found in package.json`);
-    await runGitCommand(logger, repoPath, "git checkout main");
-    await runGitCommand(logger, repoPath, `git branch -D ${branchName}`);
     return {
       error:  `Package ${packageName} not found in package.json`,
       status: "failed",
     };
   }
+
+  // Only create branch if package exists
+  await runGitCommand(logger, repoPath, `git checkout -b ${branchName}`);
 
   await updatePackageAndCommit({
     logger,
