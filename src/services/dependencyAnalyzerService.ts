@@ -4,16 +4,14 @@
  * @author Naomi Carrigan
  */
 
-import { Logger } from "@nhcarrigan/logger";
 import semver from "semver";
+import { logger } from "../utils/logger.js";
 import { NpmService } from "./npmService.js";
 import type {
   DependencyType,
   DependencyUpdate,
   PackageJson,
 } from "../types/package.types.js";
-
-const logger = new Logger("DependencyAnalyzer", process.env.LOG_TOKEN ?? "");
 
 /**
  * Checks if a version string is a valid semver range.

@@ -4,14 +4,12 @@
  * @author Naomi Carrigan
  */
 
-import { Logger } from "@nhcarrigan/logger";
 import cron from "node-cron";
 import { config, validateConfig } from "./config.js";
 import {
   UpdateOrchestratorService,
 } from "./services/updateOrchestratorService.js";
-
-const logger = new Logger("Minori", process.env.LOG_TOKEN ?? "");
+import { logger } from "./utils/logger.js";
 
 /**
  * Main entry point for the application.

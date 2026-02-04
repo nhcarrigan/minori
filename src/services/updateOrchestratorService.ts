@@ -4,8 +4,8 @@
  * @author Naomi Carrigan
  */
 
-import { Logger } from "@nhcarrigan/logger";
 import { config } from "../config.js";
+import { logger } from "../utils/logger.js";
 import { DependencyAnalyzerService } from "./dependencyAnalyzerService.js";
 import { GiteaService } from "./giteaService.js";
 import {
@@ -16,8 +16,6 @@ import {
 import { NpmService } from "./npmService.js";
 import type { GiteaRepository } from "../types/gitea.types.js";
 import type { DependencyUpdate, PackageJson } from "../types/package.types.js";
-
-const logger = new Logger("UpdateOrchestrator", process.env.LOG_TOKEN ?? "");
 
 /**
  * Strips version prefix characters from a version string.

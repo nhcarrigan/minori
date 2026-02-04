@@ -4,13 +4,11 @@
  * @author Naomi Carrigan
  */
 
-import { Logger } from "@nhcarrigan/logger";
 import axios, { isAxiosError, type AxiosInstance } from "axios";
 import semver from "semver";
 import { config } from "../config.js";
+import { logger } from "../utils/logger.js";
 import type { NpmPackageInfo } from "../types/package.types.js";
-
-const logger = new Logger("NpmService", process.env.LOG_TOKEN ?? "");
 
 /* eslint-disable @typescript-eslint/naming-convention -- GitHub API response types use snake_case property names */
 interface GitHubRelease {
