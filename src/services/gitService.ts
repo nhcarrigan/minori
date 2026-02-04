@@ -127,14 +127,6 @@ const runPnpmInstall = async(
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Catch blocks receive unknown, cast needed to access stderr/stdout */
     const details = pnpmError as Error & { stderr?: string; stdout?: string };
 
-    // TEMPORARY DEBUG - print full error details to console
-    console.log("=== PNPM ERROR DEBUG ===");
-    console.log("stderr:", details.stderr);
-    console.log("stdout:", details.stdout);
-    console.log("message:", details.message);
-    console.log("full error:", pnpmError);
-    console.log("=== END DEBUG ===");
-
     /* eslint-disable capitalized-comments -- v8 coverage requires lowercase */
     /* v8 ignore next 5 -- @preserve */
     /* eslint-enable capitalized-comments -- Re-enable rule */
