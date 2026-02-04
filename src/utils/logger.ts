@@ -4,6 +4,8 @@
  * @author Naomi Carrigan
  */
 
+import { Logger } from "@nhcarrigan/logger";
+
 // import { Logger } from "@nhcarrigan/logger";
 
 // const logger = new Logger("Minori", process.env.LOG_TOKEN ?? "");
@@ -15,6 +17,6 @@ const logger = {
   log:   (level: string, message: string) => {
     console.log(level, message);
   },
-};
+} as unknown as Logger;
 
 export { logger };
