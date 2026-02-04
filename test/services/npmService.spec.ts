@@ -429,4 +429,41 @@ describe("npmService", () => {
     const resultCustom = NpmService.getLatestMatureVersion(packageInfo, 3);
     expect(resultCustom).toBe("2.0.0");
   });
+
+  it("should skip prerelease versions like rc, alpha, beta", () => {
+    expect.assertions(1);
+    const oldDate = getDaysAgoIso(15);
+    const packageInfo = {
+      "dist-tags": { latest: "3.0.0-rc.1" },
+      "name":      "test-package",
+      "time":      {
+        "2.0.0":        oldDate,
+        "3.0.0-alpha":  oldDate,
+        "3.0.0-beta.1": oldDate,
+        "3.0.0-rc.1":   oldDate,
+      },
+      "versions": {
+        "2.0.0":        { version: "2.0.0" },
+        "3.0.0-alpha":  { version: "3.0.0-alpha" },
+        "3.0.0-beta.1": { version: "3.0.0-beta.1" },
+        "3.0.0-rc.1":   { version: "3.0.0-rc.1" },
+      },
+    };
+    // Should return 2.0.0 since all 3.0.0 versions are prereleases
+    const result = NpmService.getLatestMatureVersion(packageInfo);
+    expect(result).toBe("2.0.0");
+  });
+
+  it("should return null when only prerelease versions exist", () => {
+    expect.assertions(1);
+    const oldDate = getDaysAgoIso(15);
+    const packageInfo = {
+      "dist-tags": { latest: "1.0.0-rc.1" },
+      "name":      "test-package",
+      "time":      { "1.0.0-rc.1": oldDate },
+      "versions":  { "1.0.0-rc.1": { version: "1.0.0-rc.1" } },
+    };
+    const result = NpmService.getLatestMatureVersion(packageInfo);
+    expect(result).toBeNull();
+  });
 });

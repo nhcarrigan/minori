@@ -6,6 +6,7 @@
 
 import { Logger } from "@nhcarrigan/logger";
 import axios, { isAxiosError, type AxiosInstance } from "axios";
+import semver from "semver";
 import { config } from "../config.js";
 import type { NpmPackageInfo } from "../types/package.types.js";
 
@@ -164,6 +165,12 @@ class NpmService {
 
     const versions = Object.keys(packageInfo.versions);
     const matureVersions = versions.filter((version) => {
+      // Skip prerelease versions (e.g., 1.0.0-rc.1, 1.0.0-alpha, 1.0.0-beta.2)
+      const prereleaseComponents = semver.prerelease(version);
+      if (prereleaseComponents !== null && prereleaseComponents.length > 0) {
+        return false;
+      }
+
       const publishedAt = packageInfo.time[version];
       if (publishedAt === undefined) {
         return false;
