@@ -119,7 +119,8 @@ const updatePackageAndCommit = async(
   await writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 
   void logger.log("info", `Running pnpm install for ${packageName}...`);
-  await execAsync("pnpm install --no-frozen-lockfile", { cwd: repoPath });
+  const pnpmPath = "/home/naomi/.local/share/pnpm/pnpm";
+  await execAsync(`${pnpmPath} install --no-frozen-lockfile`, { cwd: repoPath });
 
   await runGitCommand(logger, repoPath, "git add package.json pnpm-lock.yaml");
   const commitMessage = `deps: update ${packageName} to ${targetVersion}`;
