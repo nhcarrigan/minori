@@ -203,6 +203,44 @@ describe("gitService", () => {
     expect(result.status).toBe("up-to-date");
   });
 
+  it("should delete stale local branch before checking out remote", async() => {
+    expect.assertions(2);
+    const branchDeleteCalls: Array<string> = [];
+    mockExecAsync.mockImplementation((command: string) => {
+      if (command.includes("git branch -r")) {
+        return Promise.resolve({
+          stderr: "",
+          stdout: "  origin/dependencies/update-test-package\n",
+        });
+      }
+      if (command.includes("git branch") && !command.includes("-")) {
+        // Return local branches including the stale one
+        return Promise.resolve({
+          stderr: "",
+          stdout: "* main\n  dependencies/update-test-package\n",
+        });
+      }
+      if (command.includes("git branch -D")) {
+        branchDeleteCalls.push(command);
+      }
+      return Promise.resolve({ stderr: "", stdout: "" });
+    });
+    vi.mocked(readFile).mockResolvedValue(JSON.stringify({
+      dependencies: { "test-package": "2.0.0" },
+    }));
+    const { createOrUpdateBranch } = await import("../../src/services/gitService.js");
+    const mockClonedRepo = createMockClonedRepo();
+    const result = await createOrUpdateBranch({
+      branchName:    "dependencies/update-test-package",
+      clonedRepo:    mockClonedRepo,
+      logger:        mockLogger,
+      packageName:   "test-package",
+      targetVersion: "2.0.0",
+    });
+    expect(result.status).toBe("up-to-date");
+    expect(branchDeleteCalls).toHaveLength(1);
+  });
+
   it("should fail when package is not found", async() => {
     expect.assertions(2);
     mockExecAsync.mockResolvedValue({ stderr: "", stdout: "" });

@@ -224,8 +224,17 @@ const handleExistingBranch = async(
     = options;
   const { path: repoPath } = clonedRepo;
 
-  await runGitCommand(logger, repoPath, `git checkout ${branchName}`);
-  await runGitCommand(logger, repoPath, `git pull origin ${branchName}`);
+  // Delete local branch if it exists (stale from previous run)
+  const localBranches = await runGitCommand(logger, repoPath, "git branch");
+  if (localBranches.includes(branchName)) {
+    await runGitCommand(logger, repoPath, `git branch -D ${branchName}`);
+  }
+
+  await runGitCommand(
+    logger,
+    repoPath,
+    `git checkout -b ${branchName} origin/${branchName}`,
+  );
 
   const currentVersion = await getCurrentVersionOnBranch(repoPath, packageName);
 
