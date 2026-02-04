@@ -120,7 +120,22 @@ const updatePackageAndCommit = async(
 
   void logger.log("info", `Running pnpm install for ${packageName}...`);
   const pnpmPath = "/home/naomi/.local/share/pnpm/pnpm";
-  await execAsync(`${pnpmPath} install --no-frozen-lockfile`, { cwd: repoPath });
+  try {
+    await execAsync(`${pnpmPath} install --no-frozen-lockfile`, { cwd: repoPath });
+  } catch (pnpmError: unknown) {
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Catch blocks receive unknown, cast needed to access stderr/stdout */
+    const details = pnpmError as Error & { stderr?: string; stdout?: string };
+
+    /* eslint-disable capitalized-comments -- v8 coverage requires lowercase */
+    /* v8 ignore next 5 -- @preserve */
+    /* eslint-enable capitalized-comments -- Re-enable rule */
+    /* eslint-disable @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing -- Intentionally using || to treat empty strings as falsy */
+    const errorMessage = details.stderr || details.stdout || details.message;
+    /* eslint-enable @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing -- Re-enable rules */
+
+    void logger.log("info", `pnpm install failed: ${errorMessage}`);
+    throw pnpmError;
+  }
 
   await runGitCommand(logger, repoPath, "git add package.json pnpm-lock.yaml");
   const commitMessage = `deps: update ${packageName} to ${targetVersion}`;

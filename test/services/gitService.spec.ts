@@ -363,4 +363,38 @@ describe("gitService", () => {
     expect(writtenContent.dependencies["test-package"]).toBe("2.0.0");
     expect(writtenContent.devDependencies["test-package"]).toBe("2.0.0");
   });
+
+  it("should log pnpm error details when install fails", async() => {
+    expect.assertions(2);
+    mockExecAsync.mockImplementation((command: string) => {
+      if (command.includes("pnpm install")) {
+        const error = new Error("pnpm failed") as Error & {
+          stderr: string;
+          stdout: string;
+        };
+        error.stderr = "ERR_PNPM_NO_MATCHING_VERSION";
+        error.stdout = "";
+        return Promise.reject(error);
+      }
+      return Promise.resolve({ stderr: "", stdout: "" });
+    });
+    vi.mocked(readFile).mockResolvedValue(JSON.stringify({
+      dependencies: { "test-package": "1.0.0" },
+    }));
+    vi.mocked(writeFile).mockResolvedValue(undefined);
+    const { createOrUpdateBranch } = await import("../../src/services/gitService.js");
+    const mockClonedRepo = createMockClonedRepo();
+    const result = await createOrUpdateBranch({
+      branchName:    "dependencies/update-test-package",
+      clonedRepo:    mockClonedRepo,
+      logger:        mockLogger,
+      packageName:   "test-package",
+      targetVersion: "2.0.0",
+    });
+    expect(result.status).toBe("failed");
+    expect(mockLogger.log).toHaveBeenCalledWith(
+      "info",
+      expect.stringContaining("ERR_PNPM_NO_MATCHING_VERSION"),
+    );
+  });
 });
