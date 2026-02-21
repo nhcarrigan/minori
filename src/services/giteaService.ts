@@ -7,6 +7,7 @@
 import axios, { isAxiosError, type AxiosInstance } from "axios";
 import { config } from "../config.js";
 import type {
+  GiteaCombinedStatus,
   GiteaFile,
   GiteaPullRequest,
   GiteaRepository,
@@ -141,6 +142,83 @@ class GiteaService {
       { params: { state } },
     );
     return data;
+  }
+
+  /**
+   * Gets the combined commit status for a specific commit by querying the Gitea API for all status checks.
+   * @param owner - The repository owner.
+   * @param repo - The repository name.
+   * @param sha - The commit SHA to check.
+   * @returns The combined status of all checks (pending, success, error, or failure).
+   */
+  public async getCommitStatus(
+    owner: string,
+    repo: string,
+    sha: string,
+  ): Promise<GiteaCombinedStatus> {
+    const { data } = await this.client.get<GiteaCombinedStatus>(
+      `/repos/${owner}/${repo}/commits/${sha}/status`,
+    );
+    return data;
+  }
+
+  /**
+   * Merges a pull request.
+   * @param owner - The repository owner.
+   * @param repo - The repository name.
+   * @param index - The pull request index number.
+   * @returns True if the merge was successful, false otherwise.
+   */
+  public async mergePullRequest(
+    owner: string,
+    repo: string,
+    index: number,
+  ): Promise<boolean> {
+    try {
+      await this.client.post(
+        `/repos/${owner}/${repo}/pulls/${String(index)}/merge`,
+        {
+          /* eslint-disable @typescript-eslint/naming-convention -- Gitea API uses snake_case */
+          Do:                        "merge",
+          MergeMessageField:         "",
+          MergeTitleField:           "",
+          delete_branch_after_merge: true,
+          force_merge:               false,
+          head_commit_id:            "",
+          merge_when_checks_succeed: false,
+          /* eslint-enable @typescript-eslint/naming-convention -- End Gitea API */
+        },
+      );
+      return true;
+    } catch (error) {
+      if (isAxiosError(error)) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Deletes a repository branch by name.
+   * @param owner - The repository owner.
+   * @param repo - The repository name.
+   * @param branch - The branch name to remove.
+   * @returns True if successful, false otherwise.
+   */
+  public async deleteBranch(
+    owner: string,
+    repo: string,
+    branch: string,
+  ): Promise<boolean> {
+    try {
+      await this.client.delete(`/repos/${owner}/${repo}/branches/${branch}`);
+      return true;
+    } catch (error) {
+      if (isAxiosError(error)) {
+        return false;
+      }
+      throw error;
+    }
   }
 }
 

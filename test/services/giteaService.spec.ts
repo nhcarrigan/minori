@@ -6,11 +6,16 @@
 
 /* eslint-disable vitest/valid-expect -- Test expectations don't need messages */
 /* eslint-disable max-lines-per-function -- Test suites require many test cases */
+/* eslint-disable max-lines -- Test suites naturally have many cases */
+/* eslint-disable max-statements -- Test suites naturally have many statements */
 /* eslint-disable @typescript-eslint/consistent-type-assertions -- Required for mocking */
 /* eslint-disable @typescript-eslint/consistent-type-imports -- Dynamic imports */
 /* eslint-disable @typescript-eslint/naming-convention -- Environment variables and Gitea API format */
 /* eslint-disable max-nested-callbacks -- Vitest structure requires nested callbacks */
 /* eslint-disable vitest/require-to-throw-message -- Generic throw assertion */
+/* eslint-disable vitest/prefer-to-be-truthy -- toBe(true) is clearer for boolean functions */
+/* eslint-disable vitest/prefer-to-be-falsy -- toBe(false) is clearer for boolean functions */
+/* eslint-disable stylistic/max-len -- Test files have long object literals */
 
 import axios, { AxiosError, type AxiosResponse } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -24,8 +29,9 @@ vi.mock("axios", async() => {
     default:    {
       create: vi.fn(() => {
         return {
-          get:  vi.fn(),
-          post: vi.fn(),
+          delete: vi.fn(),
+          get:    vi.fn(),
+          post:   vi.fn(),
         };
       }),
     },
@@ -69,6 +75,8 @@ describe("giteaService", () => {
   let mockGet: ReturnType<typeof vi.fn>;
   // eslint-disable-next-line @typescript-eslint/init-declarations -- Reassigned in beforeEach
   let mockPost: ReturnType<typeof vi.fn>;
+  // eslint-disable-next-line @typescript-eslint/init-declarations -- Reassigned in beforeEach
+  let mockDelete: ReturnType<typeof vi.fn>;
   const originalEnvironment = process.env;
 
   beforeEach(() => {
@@ -77,9 +85,11 @@ describe("giteaService", () => {
 
     mockGet = vi.fn();
     mockPost = vi.fn();
+    mockDelete = vi.fn();
     vi.mocked(axios.create).mockReturnValue({
-      get:  mockGet,
-      post: mockPost,
+      delete: mockDelete,
+      get:    mockGet,
+      post:   mockPost,
     } as unknown as ReturnType<typeof axios.create>);
 
     giteaService = new GiteaService();
@@ -305,5 +315,70 @@ describe("giteaService", () => {
       "/repos/owner/repo/pulls",
       { params: { state: "closed" } },
     );
+  });
+
+  it("should get commit status", async() => {
+    expect.assertions(2);
+    const mockStatus = {
+      commit_url:  "https://git.nhcarrigan.com/api/v1/repos/owner/repo/commits/abc123",
+      repository:  createMockRepository({ id: 1, name: "test-repo" }),
+      sha:         "abc123",
+      state:       "success",
+      statuses:    [],
+      total_count: 0,
+      url:         "https://git.nhcarrigan.com/api/v1/repos/owner/repo/commits/abc123/status",
+    };
+    mockGet.mockResolvedValueOnce({ data: mockStatus });
+    const result = await giteaService.getCommitStatus("owner", "repo", "abc123");
+    expect(result).toStrictEqual(mockStatus);
+    expect(mockGet).toHaveBeenCalledWith("/repos/owner/repo/commits/abc123/status");
+  });
+
+  it("should merge a pull request successfully", async() => {
+    expect.assertions(2);
+    mockPost.mockResolvedValueOnce({ data: {} });
+    const result = await giteaService.mergePullRequest("owner", "repo", 1);
+    expect(result).toBe(true);
+    expect(mockPost).toHaveBeenCalledWith("/repos/owner/repo/pulls/1/merge", {
+      Do:                        "merge",
+      MergeMessageField:         "",
+      MergeTitleField:           "",
+      delete_branch_after_merge: true,
+      force_merge:               false,
+      head_commit_id:            "",
+      merge_when_checks_succeed: false,
+    });
+  });
+
+  it("should return false when merge fails", async() => {
+    expect.assertions(1);
+    const axiosError = new AxiosError("Merge conflict");
+    mockPost.mockRejectedValueOnce(axiosError);
+    const result = await giteaService.mergePullRequest("owner", "repo", 1);
+    expect(result).toBe(false);
+  });
+
+  it("should delete a branch successfully", async() => {
+    expect.assertions(2);
+    mockDelete.mockResolvedValueOnce({ data: {} });
+    const result = await giteaService.deleteBranch(
+      "owner",
+      "repo",
+      "feature-branch",
+    );
+    expect(result).toBe(true);
+    expect(mockDelete).toHaveBeenCalledWith("/repos/owner/repo/branches/feature-branch");
+  });
+
+  it("should return false when branch deletion fails", async() => {
+    expect.assertions(1);
+    const axiosError = new AxiosError("Branch not found");
+    mockDelete.mockRejectedValueOnce(axiosError);
+    const result = await giteaService.deleteBranch(
+      "owner",
+      "repo",
+      "nonexistent-branch",
+    );
+    expect(result).toBe(false);
   });
 });

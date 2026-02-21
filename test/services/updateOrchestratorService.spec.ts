@@ -18,6 +18,8 @@ const mockGiteaGetFileContent = vi.fn();
 const mockGiteaListOrgRepositories = vi.fn();
 const mockGiteaCreatePullRequest = vi.fn();
 const mockGiteaListPullRequests = vi.fn();
+const mockGiteaGetCommitStatus = vi.fn();
+const mockGiteaMergePullRequest = vi.fn();
 const mockNpmGetPackageChangelog = vi.fn();
 const mockNpmGetPackageInfo = vi.fn();
 const mockAnalyzePackageJson = vi.fn();
@@ -39,9 +41,11 @@ vi.mock("../../src/services/giteaService.js", () => {
 
     GiteaService: class MockGiteaService {
       public createPullRequest = mockGiteaCreatePullRequest;
+      public getCommitStatus = mockGiteaGetCommitStatus;
       public getFileContent = mockGiteaGetFileContent;
       public listOrgRepositories = mockGiteaListOrgRepositories;
       public listPullRequests = mockGiteaListPullRequests;
+      public mergePullRequest = mockGiteaMergePullRequest;
     },
   };
 });
@@ -221,6 +225,7 @@ describe("updateOrchestratorService", () => {
     const mockUpdates = [ createMockUpdate() ];
     mockGiteaListOrgRepositories.mockResolvedValue(mockRepos);
     mockGiteaGetFileContent.mockResolvedValue(mockFileContent);
+    mockGiteaListPullRequests.mockResolvedValue([]);
     mockAnalyzePackageJson.mockResolvedValue(mockUpdates);
     mockNpmGetPackageChangelog.mockResolvedValue("## Changelog");
     mockCloneRepository.mockResolvedValue(createMockClonedRepo());
@@ -267,6 +272,7 @@ describe("updateOrchestratorService", () => {
     const mockUpdates = [ createMockUpdate() ];
     mockGiteaListOrgRepositories.mockResolvedValue(mockRepos);
     mockGiteaGetFileContent.mockResolvedValue(mockFileContent);
+    mockGiteaListPullRequests.mockResolvedValue([]);
     mockAnalyzePackageJson.mockResolvedValue(mockUpdates);
     mockCloneRepository.mockResolvedValue(createMockClonedRepo());
     mockCreateOrUpdateBranch.mockResolvedValue({
@@ -289,6 +295,7 @@ describe("updateOrchestratorService", () => {
     const mockUpdates = [ createMockUpdate() ];
     mockGiteaListOrgRepositories.mockResolvedValue(mockRepos);
     mockGiteaGetFileContent.mockResolvedValue(mockFileContent);
+    mockGiteaListPullRequests.mockResolvedValue([]);
     mockAnalyzePackageJson.mockResolvedValue(mockUpdates);
     mockCloneRepository.mockResolvedValue(createMockClonedRepo());
     mockCreateOrUpdateBranch.mockResolvedValue({
@@ -312,6 +319,7 @@ describe("updateOrchestratorService", () => {
     const mockUpdates = [ createMockUpdate() ];
     mockGiteaListOrgRepositories.mockResolvedValue(mockRepos);
     mockGiteaGetFileContent.mockResolvedValue(mockFileContent);
+    mockGiteaListPullRequests.mockResolvedValue([]);
     mockAnalyzePackageJson.mockResolvedValue(mockUpdates);
     mockCloneRepository.mockResolvedValue(createMockClonedRepo());
     mockCreateOrUpdateBranch.mockResolvedValue({
@@ -354,6 +362,7 @@ describe("updateOrchestratorService", () => {
     const mockUpdates = [ createMockUpdate() ];
     mockGiteaListOrgRepositories.mockResolvedValue(mockRepos);
     mockGiteaGetFileContent.mockResolvedValue(mockFileContent);
+    mockGiteaListPullRequests.mockResolvedValue([]);
     mockAnalyzePackageJson.mockResolvedValue(mockUpdates);
     mockCloneRepository.mockResolvedValue(createMockClonedRepo());
     mockCreateOrUpdateBranch.mockResolvedValue({
@@ -377,6 +386,7 @@ describe("updateOrchestratorService", () => {
     const mockUpdates = [ createMockUpdate() ];
     mockGiteaListOrgRepositories.mockResolvedValue(mockRepos);
     mockGiteaGetFileContent.mockResolvedValue(mockFileContent);
+    mockGiteaListPullRequests.mockResolvedValue([]);
     mockAnalyzePackageJson.mockResolvedValue(mockUpdates);
     mockNpmGetPackageChangelog.mockResolvedValue("## Changelog");
     mockCloneRepository.mockResolvedValue(createMockClonedRepo());
@@ -426,6 +436,7 @@ describe("updateOrchestratorService", () => {
     const mockCleanup = vi.fn();
     mockGiteaListOrgRepositories.mockResolvedValue(mockRepos);
     mockGiteaGetFileContent.mockResolvedValue(mockFileContent);
+    mockGiteaListPullRequests.mockResolvedValue([]);
     mockAnalyzePackageJson.mockResolvedValue(mockUpdates);
     mockCloneRepository.mockResolvedValue(createMockClonedRepo(mockCleanup));
     mockCreateOrUpdateBranch.mockResolvedValue({

@@ -6,6 +6,10 @@
 
 import { config } from "../config.js";
 import { logger } from "../utils/logger.js";
+import {
+  isMajorVersionBump,
+  stripVersionPrefix,
+} from "../utils/versionComparison.js";
 import { DependencyAnalyzerService } from "./dependencyAnalyzerService.js";
 import { GiteaService } from "./giteaService.js";
 import {
@@ -16,15 +20,6 @@ import {
 import { NpmService } from "./npmService.js";
 import type { GiteaRepository } from "../types/gitea.types.js";
 import type { DependencyUpdate, PackageJson } from "../types/package.types.js";
-
-/**
- * Strips version prefix characters from a version string.
- * @param version - The version string with potential prefixes.
- * @returns The version without prefix characters.
- */
-const stripVersionPrefix = (version: string): string => {
-  return version.replace(/^[<=>^~]*/, "");
-};
 
 /**
  * Generates the body content for a PR.
@@ -143,6 +138,103 @@ class UpdateOrchestratorService {
   }
 
   /**
+   * Attempts to merge an existing PR after checking CI status.
+   * @param repo - The repository information.
+   * @param update - The dependency update details.
+   * @param matchingPR - The existing PR with head SHA and number.
+   * @param matchingPR.head - The PR head information.
+   * @param matchingPR.head.sha - The commit SHA to check.
+   * @param matchingPR.number - The PR number for merging.
+   * @returns True if merge was attempted, false otherwise.
+   */
+  private async attemptPRMerge(
+    repo: GiteaRepository,
+    update: DependencyUpdate,
+    matchingPR: { head: { sha: string }; number: number },
+  ): Promise<boolean> {
+    const commitStatus = await this.giteaService.getCommitStatus(
+      config.giteaOrg,
+      repo.name,
+      matchingPR.head.sha,
+    );
+
+    if (commitStatus.state !== "success") {
+      await logger.log(
+        "info",
+        `    PR exists for ${update.packageName} but CI status is ${commitStatus.state}, skipping auto-merge...`,
+      );
+      return true;
+    }
+
+    await logger.log(
+      "info",
+      `    Auto-merging PR for ${update.packageName} (CI passed, non-major bump)...`,
+    );
+
+    const merged = await this.giteaService.mergePullRequest(
+      config.giteaOrg,
+      repo.name,
+      matchingPR.number,
+    );
+
+    if (merged) {
+      await logger.log(
+        "info",
+        `    Successfully merged PR for ${update.packageName}`,
+      );
+      return true;
+    }
+
+    await logger.log(
+      "warn",
+      `    Failed to merge PR for ${update.packageName}`,
+    );
+    return true;
+  }
+
+  /**
+   * Checks if an existing PR can be auto-merged based on CI status and version bump type.
+   * @param repo - The repository information.
+   * @param update - The dependency update details.
+   * @param branchName - The branch name for the PR.
+   * @returns True if the PR exists and was handled, false otherwise.
+   */
+  private async checkAndMergeExistingPR(
+    repo: GiteaRepository,
+    update: DependencyUpdate,
+    branchName: string,
+  ): Promise<boolean> {
+    const existingPRs = await this.giteaService.listPullRequests(
+      config.giteaOrg,
+      repo.name,
+      "open",
+    );
+
+    const matchingPR = existingPRs.find((pr) => {
+      return pr.head.ref === branchName;
+    });
+
+    if (matchingPR === undefined) {
+      return false;
+    }
+
+    const isMajorBump = isMajorVersionBump(
+      update.currentVersion,
+      update.latestVersion,
+    );
+
+    if (isMajorBump) {
+      await logger.log(
+        "info",
+        `    PR exists for ${update.packageName} but is a major version bump, skipping auto-merge...`,
+      );
+      return true;
+    }
+
+    return await this.attemptPRMerge(repo, update, matchingPR);
+  }
+
+  /**
    * Creates or updates a PR for a dependency update.
    * @param repo - The repository information.
    * @param update - The dependency update details.
@@ -157,6 +249,16 @@ class UpdateOrchestratorService {
       = `${config.prBranchPrefix}${update.packageName.replaceAll(/[/@]/g, "-")}`;
 
     try {
+      const existingPRMerged = await this.checkAndMergeExistingPR(
+        repo,
+        update,
+        branchName,
+      );
+
+      if (existingPRMerged) {
+        return;
+      }
+
       const result = await createOrUpdateBranch({
         branchName:    branchName,
         clonedRepo:    clonedRepo,
