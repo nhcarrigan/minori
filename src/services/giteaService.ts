@@ -184,7 +184,7 @@ class GiteaService {
           MergeMessageField:         "",
           MergeTitleField:           "",
           delete_branch_after_merge: true,
-          force_merge:               false,
+          force_merge:               true,
           head_commit_id:            "",
           merge_when_checks_succeed: false,
           /* eslint-enable @typescript-eslint/naming-convention -- End Gitea API */
