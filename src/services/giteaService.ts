@@ -6,6 +6,7 @@
 
 import axios, { isAxiosError, type AxiosInstance } from "axios";
 import { config } from "../config.js";
+import { logger } from "../utils/logger.js";
 import type {
   GiteaCombinedStatus,
   GiteaFile,
@@ -192,6 +193,10 @@ class GiteaService {
       return true;
     } catch (error) {
       if (isAxiosError(error)) {
+        await logger.log(
+          "warn",
+          `Merge failed with status ${String(error.response?.status)}: ${JSON.stringify(error.response?.data)}`,
+        );
         return false;
       }
       throw error;
